@@ -12,4 +12,4 @@ source .venv/bin/activate
 # Set Python path for the entire script
 export PYTHONPATH=/backend
 
-exec uvicorn app.main:app --host "$HOST" --port "$PORT"
+exec uvicorn app.main:app --host "$HOST" --port "$PORT" --reload
