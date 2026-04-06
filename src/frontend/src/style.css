@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+}
+
+/* Smooth scrollbar for message area */
+.messages-area {
+  scrollbar-width: thin;
+  scrollbar-color: #374151 transparent;
+}
+
+.messages-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.messages-area::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 2px;
+}
+
+/* Streaming cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.streaming-cursor::after {
+  content: '▋';
+  animation: blink 1s step-end infinite;
+  margin-left: 1px;
+  font-size: 0.85em;
+  color: #a78bfa;
+}
