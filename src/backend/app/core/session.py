@@ -8,6 +8,7 @@ connection, permission callbacks, and conversation state.
 
 import asyncio
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -19,9 +20,13 @@ from claude_agent_sdk import (
     ClaudeSDKClient,
     CLIConnectionError,
     CLINotFoundError,
+    PermissionResultAllow,
+    PermissionResultDeny,
+    PermissionUpdate,
     ResultMessage,
     SystemMessage,
     TextBlock,
+    ToolPermissionContext,
     ToolUseBlock,
     UserMessage,
 )
@@ -80,7 +85,7 @@ class AgentSession:
         options_dict = {
             "allowed_tools": [],
             "max_turns": 0,  # No limit on turns
-            # "can_use_tool": self.permission_callback,  # Permission callback for tool usage
+            "can_use_tool": self.permission_callback,  # Permission callback for tool usage
             "permission_mode": "default",
         }
         if resume_session_id:
@@ -96,7 +101,7 @@ class AgentSession:
 
         options = ClaudeAgentOptions(**options_dict)
         try:
-            logger.info("Connecting to Claude SDK...")
+            logger.info(f"Connecting to Claude SDK with options: {options_dict}")
 
             self.client = ClaudeSDKClient(options=options)
 
@@ -353,3 +358,178 @@ class AgentSession:
             raise HTTPException(
                 status_code=500, detail=f"Failed to interrupt: {str(e)}"
             )
+
+    async def permission_callback(
+        self, tool_name: str, input_data: dict, context: ToolPermissionContext
+    ) -> PermissionResultAllow | PermissionResultDeny:
+        """
+        Permission callback for tool usage.
+
+        This method is called by the SDK when a tool needs permission.
+        It creates a pending permission request and waits for the client
+        to respond via the API.
+
+        Args:
+            tool_name: Name of the tool requesting permission
+            input_data: Tool input parameters
+            context: Permission context with suggestions
+
+        Returns:
+            Permission result (allow or deny)
+        """
+        # Auto-allow all MCP tools (tools from MCP servers)
+        if tool_name.startswith("mcp__"):
+            logger.info(f"✓ Auto-allow MCP tool: {tool_name}")
+            return PermissionResultAllow()
+
+        auto_allow_tools_env = get_settings().AUTO_ALLOW_TOOLS.strip()
+        if auto_allow_tools_env:
+            auto_allow_tools = [
+                tool.strip() for tool in auto_allow_tools_env.split(",") if tool.strip()
+            ]
+        else:
+            # Default auto-allow list (most common tools)
+
+            auto_allow_tools = [
+                # File operations
+                "Read",
+                "Write",
+                "Edit",
+                "NotebookEdit",
+                # Search operations
+                "Glob",
+                "Grep",
+                # Shell execution
+                "Bash",
+                "KillShell",
+                # Read-only external tools
+                "WebSearch",
+                "WebFetch",
+                # Task management
+                "Task",
+                "TaskOutput",
+                "TodoWrite",
+                # User interaction
+                "AskUserQuestion",
+                # Plan mode
+                "EnterPlanMode",
+                "ExitPlanMode",
+                # Skills
+                "Skill",
+            ]
+            auto_allow_tools = []
+        if tool_name in auto_allow_tools:
+            logger.info(f"✓ Auto-allowing tool: {tool_name}")
+            return PermissionResultAllow()
+
+        # Create permission request
+        logger.info(f"⚠ Requesting user approval for: {tool_name}")
+        request_id = str(uuid.uuid4())
+
+        # Handle AskUserQuestion specially
+        questions = None
+        if tool_name == "AskUserQuestion" and "questions" in input_data:
+            questions = input_data["questions"]
+            logger.info(f"📝 AskUserQuestion with {len(questions)} questions")
+
+        self.pending_permission = {
+            "request_id": request_id,
+            "tool_name": tool_name,
+            "tool_input": input_data,
+            "suggestions": [
+                s.__dict__ if hasattr(s, "__dict__") else s for s in context.suggestions
+            ],
+            "questions": questions,
+        }
+        self.permission_event = asyncio.Event()
+        self.permission_result = None
+
+        try:
+            self.permission_queue.put_nowait(self.pending_permission)
+        except Exception as e:
+            logger.error(f"Failed to put permission request in queue: {e}")
+            # Deny permission if we can't process the request
+            return PermissionResultDeny()
+
+        try:
+            await asyncio.wait_for(
+                self.permission_event.wait(), timeout=300
+            )  # 5 minute timeout
+        except asyncio.TimeoutError:
+            logger.info(f"✗ Permission request timed out for: {tool_name}")
+            self.pending_permission = None
+            return PermissionResultDeny(message="Permission request timed out")
+
+        # Get result
+        result = self.permission_result
+        self.pending_permission = None
+        self.permission_event = None
+        self.permission_result = None
+
+        if isinstance(result, PermissionResultAllow):
+            logger.info(f"✓ User allowed: {tool_name}")
+            if hasattr(result, "updated_permissions") and result.updated_permissions:
+                logger.info(f"Applied {len(result.updated_permissions)} suggestions")
+        else:
+            logger.info(f"✗ User denied: {tool_name}")
+
+        return result
+
+    def respond_to_permission(
+        self,
+        request_id: str,
+        allowed: bool,
+        apply_suggestions: bool = False,
+        answers: dict[str, str] | None = None,
+    ):
+        """
+        Respond to a pending permission request.
+
+        Args:
+            request_id: The permission request ID
+            allowed: Whether to allow the operation
+            apply_suggestions: Whether to apply permission suggestions
+            answers: Optional dict of question answers for AskUserQuestion
+
+        Raises:
+            HTTPException: If no matching pending permission
+        """
+        if (
+            not self.pending_permission
+            or self.pending_permission["request_id"] != request_id
+        ):
+            logger.debug("✗ No matching permission request found")
+            raise HTTPException(
+                status_code=404, detail="No matching permission request"
+            )
+
+        tool_name = self.pending_permission.get("tool_name", "unknown")
+        if allowed:
+            # Handle AskUserQuestion with answers
+            if tool_name == "AskUserQuestion" and answers:
+                logger.info(f"✓ AskUserQuestion answered: {answers}")
+                # Create updated input with the answers
+                updated_input = {
+                    "questions": self.pending_permission["questions"],
+                    "answers": answers,
+                }
+                self.permission_result = PermissionResultAllow(
+                    updated_input=updated_input
+                )
+            elif apply_suggestions and self.pending_permission["suggestions"]:
+                suggestions = []
+                for s in self.pending_permission["suggestions"]:
+                    suggestions.append(PermissionUpdate(**s))
+                logger.info(f" ✓ Allowing with {len(suggestions)} suggestions applied")
+                self.permission_result = PermissionResultAllow(
+                    updated_permissions=suggestions
+                )
+            else:
+                logger.info("✓ Allowing without suggestions")
+                self.permission_result = PermissionResultAllow()
+        else:
+            logger.info("✗ Denying request")
+            self.permission_result = PermissionResultDeny(message="User denied")
+        logger.debug("Signaling permission_event to resume execution")
+        if self.permission_event:
+            self.permission_event.set()

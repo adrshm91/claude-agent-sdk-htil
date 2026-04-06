@@ -49,7 +49,7 @@ export default function ChatContainer({ messages, isStreaming, sessionId, meta, 
           </div>
         )}
         {messages.map(msg => (
-          <Message key={msg.id} msg={msg} />
+          <Message key={msg.id} msg={msg} sessionId={sessionId} />
         ))}
         <div ref={bottomRef} />
       </main>

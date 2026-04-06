@@ -48,3 +48,13 @@ class SendMessageResponse(BaseModel):
     session_id: str
     cost_usd: float | None = None
     num_turns: int | None = None
+
+
+class PermissionResponse(BaseModel):
+    """User's response to permission request."""
+
+    request_id: str
+    allowed: bool
+    apply_suggestions: bool = False
+    # Fields for AskUserQuestion responses
+    answers: dict[str, str] | None = None  # Maps question text to selected option label

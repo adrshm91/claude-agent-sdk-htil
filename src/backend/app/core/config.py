@@ -63,6 +63,8 @@ class Settings(BaseSettings):
             )
         return fastapi_kwargs
 
+    AUTO_ALLOW_TOOLS: str = ""
+
 
 @lru_cache
 def get_settings():
