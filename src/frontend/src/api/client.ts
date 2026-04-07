@@ -1,3 +1,5 @@
+import { createApiUrl } from '../config/api'
+
 /**
  * Stream a message to the backend and yield parsed SSE events.
  */
@@ -6,9 +8,11 @@ export async function streamMessage(
   sessionId: string | null,
   onEvent: (event: any) => void
 ): Promise<void> {
-  const url = sessionId
-    ? `/api/v1/messages/stream?resume_session_id=${encodeURIComponent(sessionId)}`
-    : '/api/v1/messages/stream'
+  const path = sessionId
+    ? `api/v1/messages/stream?resume_session_id=${encodeURIComponent(sessionId)}`
+    : 'api/v1/messages/stream'
+
+  const url = createApiUrl(path)
 
   const response = await fetch(url, {
     method: 'POST',

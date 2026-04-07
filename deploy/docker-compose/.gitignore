@@ -1,0 +1,6 @@
+# Environment files containing sensitive information
+.env
+.env.local
+
+# Workspace directory created by docker-compose
+workspace/

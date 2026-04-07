@@ -1,0 +1,22 @@
+services:
+  backend:
+    build:
+      context: ../../src/backend
+      dockerfile: Dockerfile
+    ports:
+      - "6060:6060"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - PORT=6060
+      - HOST=0.0.0.0
+      - WORKSPACE_BASE_PATH=/var/tmp/workspace
+      - VERSION=docker
+    volumes:
+      # Mount workspace for persistence (optional for local development)
+      - ./workspace:/var/tmp/workspace
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6060/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

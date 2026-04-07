@@ -8,6 +8,7 @@ import { Badge } from './ui/badge'
 import { Message as MessageType } from '../hooks/useAgent'
 import { cn } from '../lib/utils'
 import QuestionCard from './QuestionCard'
+import { createApiUrl } from '../config/api'
 
 interface MessageProps {
   msg: MessageType
@@ -103,7 +104,7 @@ export default function Message({ msg, sessionId }: MessageProps) {
     // Handle AskUserQuestion differently
     if (p.tool_name === 'AskUserQuestion' && p.questions) {
       const handleSubmitAnswers = async (answers: { [key: string]: string }) => {
-        const response = await fetch(`/api/v1/permissions/respond?session_id=${effectiveSessionId}`, {
+        const response = await fetch(createApiUrl(`api/v1/permissions/respond?session_id=${effectiveSessionId}`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -132,7 +133,7 @@ export default function Message({ msg, sessionId }: MessageProps) {
     const handlePermissionResponse = async (allowed: boolean, applysuggestions = false) => {
       setResponseStatus('loading')
       try {
-        const response = await fetch(`/api/v1/permissions/respond?session_id=${effectiveSessionId}`, {
+        const response = await fetch(createApiUrl(`api/v1/permissions/respond?session_id=${effectiveSessionId}`), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
