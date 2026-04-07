@@ -1,14 +1,142 @@
 @import "tailwindcss";
 
+/* Force generation of utility classes */
+@layer utilities {
+  .bg-background {
+    background-color: hsl(var(--background));
+  }
+  .bg-card {
+    background-color: hsl(var(--card));
+  }
+  .bg-muted {
+    background-color: hsl(var(--muted));
+  }
+  .bg-muted\/50 {
+    background-color: hsl(var(--muted) / 0.5);
+  }
+  .bg-muted\/30 {
+    background-color: hsl(var(--muted) / 0.3);
+  }
+  .text-foreground {
+    color: hsl(var(--foreground));
+  }
+  .text-muted-foreground {
+    color: hsl(var(--muted-foreground));
+  }
+  .text-card-foreground {
+    color: hsl(var(--card-foreground));
+  }
+  .border-border {
+    border-color: hsl(var(--border));
+  }
+  .border-input {
+    border-color: hsl(var(--input));
+  }
+  .border-muted-foreground\/20 {
+    border-color: hsl(var(--muted-foreground) / 0.2);
+  }
+  .bg-secondary {
+    background-color: hsl(var(--secondary));
+  }
+  .text-secondary-foreground {
+    color: hsl(var(--secondary-foreground));
+  }
+  .hover\:bg-secondary\/80:hover {
+    background-color: hsl(var(--secondary) / 0.8);
+  }
+  .bg-primary {
+    background-color: hsl(var(--primary));
+  }
+  .text-primary {
+    color: hsl(var(--primary));
+  }
+  .text-primary-foreground {
+    color: hsl(var(--primary-foreground));
+  }
+  .border-primary {
+    border-color: hsl(var(--primary));
+  }
+  .hover\:bg-primary\/80:hover {
+    background-color: hsl(var(--primary) / 0.8);
+  }
+  .focus-within\:border-primary:focus-within {
+    border-color: hsl(var(--primary));
+  }
+  .hover\:bg-muted\/50:hover {
+    background-color: hsl(var(--muted) / 0.5);
+  }
+  .hover\:text-foreground:hover {
+    color: hsl(var(--foreground));
+  }
+  .hover\:border-muted-foreground\/40:hover {
+    border-color: hsl(var(--muted-foreground) / 0.4);
+  }
+  .border-orange-400 {
+    border-color: rgb(251 146 60);
+  }
+  .text-orange-400 {
+    color: rgb(251 146 60);
+  }
+  .bg-orange-950\/30 {
+    background-color: rgb(67 20 7 / 0.3);
+  }
+  .bg-orange-950\/40 {
+    background-color: rgb(67 20 7 / 0.4);
+  }
+}
+
 :root {
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
+  /* VS Code light theme */
+  --background: 0 0% 100%;         /* #ffffff - VS Code light editor background */
+  --foreground: 0 0% 16%;          /* #292929 - VS Code light editor text */
+  --card: 0 0% 96%;                /* #f3f3f3 - VS Code light sidebar/panel background */
+  --card-foreground: 0 0% 16%;     /* #292929 - VS Code text on panels */
+  --popover: 0 0% 96%;             /* Same as card */
+  --popover-foreground: 0 0% 16%;
+  --primary: 210 100% 56%;         /* #007acc - VS Code primary blue */
+  --primary-foreground: 0 0% 100%; /* White text on primary */
+  --secondary: 0 0% 85%;           /* #d9d9d9 - VS Code secondary elements */
+  --secondary-foreground: 0 0% 16%;
+  --muted: 0 0% 94%;               /* #f0f0f0 - VS Code muted background */
+  --muted-foreground: 0 0% 45%;    /* #737373 - VS Code muted text */
+  --accent: 0 0% 89%;              /* #e4e4e4 - VS Code accent elements */
+  --accent-foreground: 0 0% 16%;
+  --destructive: 0 75% 42%;        /* #cd3131 - VS Code error red */
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 89%;              /* #e4e4e4 - VS Code border color */
+  --input: 0 0% 96%;               /* #f3f3f3 - VS Code input background */
+  --ring: 210 100% 56%;            /* VS Code focus ring */
+  --radius: 0.125rem;              /* 2px corners like VS Code */
+}
+
+.dark {
+  /* VS Code dark theme */
+  --background: 0 0% 12%;          /* #1e1e1e - VS Code editor background */
+  --foreground: 0 0% 83%;          /* #d4d4d4 - VS Code editor text */
+  --card: 0 0% 15%;                /* #252526 - VS Code sidebar/panel background */
+  --card-foreground: 0 0% 83%;     /* #d4d4d4 - VS Code text on panels */
+  --popover: 0 0% 15%;             /* Same as card */
+  --popover-foreground: 0 0% 83%;
+  --primary: 210 100% 56%;         /* #007acc - VS Code primary blue */
+  --primary-foreground: 0 0% 100%; /* White text on primary */
+  --secondary: 0 0% 27%;           /* #454545 - VS Code secondary elements */
+  --secondary-foreground: 0 0% 83%;
+  --muted: 0 0% 18%;               /* #2d2d30 - VS Code muted background */
+  --muted-foreground: 0 0% 60%;    /* #999999 - VS Code muted text */
+  --accent: 0 0% 24%;              /* #3c3c3c - VS Code accent elements */
+  --accent-foreground: 0 0% 83%;
+  --destructive: 0 84% 60%;        /* #f14c4c - VS Code error red */
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 24%;              /* #3c3c3c - VS Code border color */
+  --input: 0 0% 15%;               /* #252526 - VS Code input background */
+  --ring: 210 100% 56%;            /* VS Code focus ring */
+  --radius: 0.125rem;              /* 2px corners like VS Code */
 }
 
 /* Smooth scrollbar for message area */
 .messages-area {
   scrollbar-width: thin;
-  scrollbar-color: #374151 transparent;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
 }
 
 .messages-area::-webkit-scrollbar {
@@ -16,7 +144,7 @@
 }
 
 .messages-area::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: hsl(var(--muted-foreground) / 0.3);
   border-radius: 2px;
 }
 
@@ -31,5 +159,71 @@
   animation: blink 1s step-end infinite;
   margin-left: 1px;
   font-size: 0.85em;
-  color: #a78bfa;
+  color: hsl(var(--primary));
+}
+
+/* Prose improvements for markdown */
+.prose {
+  color: hsl(var(--foreground));
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose h1 { font-size: 1.5em; }
+.prose h2 { font-size: 1.3em; }
+.prose h3 { font-size: 1.1em; }
+
+.prose p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  line-height: 1.6;
+}
+
+.prose ul, .prose ol {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+
+.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 1em;
+  margin: 1em 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 2em 0;
+}
+
+.prose a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--primary) / 0.3);
+}
+
+.prose a:hover {
+  text-decoration-color: hsl(var(--primary));
 }

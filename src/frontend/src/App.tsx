@@ -1,5 +1,5 @@
-import { useAgent } from './hooks/useAgent.js'
-import ChatContainer from './components/ChatContainer.jsx'
+import { useAgent } from './hooks/useAgent.ts'
+import ChatContainer from './components/ChatContainer.tsx'
 
 export default function App() {
   const { messages, isStreaming, sessionId, meta, status, sendMessage, newSession } = useAgent()

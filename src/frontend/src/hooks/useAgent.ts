@@ -1,43 +1,60 @@
 import { useCallback, useRef, useState } from 'react'
-import { streamMessage } from '../api/client.js'
+import { streamMessage } from '../api/client.ts'
 
-/**
- * Each message in the `messages` array has this shape:
- * {
- *   id: string,
- *   role: 'user' | 'assistant',
- *   type: 'text' | 'tool_use' | 'permission' | 'error',
- *   content: string,          // for text / error
- *   streaming: boolean,       // true while text is still arriving
- *   toolName: string,         // for tool_use
- *   toolInput: object,        // for tool_use
- *   permission: object,       // for permission
- * }
- */
+export interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  type: 'text' | 'tool_use' | 'permission' | 'error'
+  content?: string          // for text / error
+  streaming: boolean       // true while text is still arriving
+  toolName?: string        // for tool_use
+  toolInput?: any          // for tool_use
+  permission?: any         // for permission
+}
+
+export interface Meta {
+  cost_usd: number
+  num_turns: number
+}
+
+export interface StreamEvent {
+  type: 'text' | 'tool_use' | 'permission' | 'result' | 'done' | 'error'
+  content?: string
+  tool_name?: string
+  tool_input?: any
+  permission?: any
+  session_id?: string
+  cost_usd?: number
+  num_turns?: number
+  error?: string
+}
 
 let idCounter = 0
 const uid = () => String(++idCounter)
 
 export function useAgent() {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
-  const [sessionId, setSessionId] = useState(null)
-  const [meta, setMeta] = useState(null) // { cost_usd, num_turns }
-  const [status, setStatus] = useState('ready') // 'ready' | 'thinking' | 'error'
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [meta, setMeta] = useState<Meta | null>(null)
+  const [status, setStatus] = useState<'ready' | 'thinking' | 'error'>('ready')
 
   // Ref to track the current assistant text bubble id during a stream
-  const assistantBubbleId = useRef(null)
+  const assistantBubbleId = useRef<string | null>(null)
 
-  const updateMessage = useCallback((id, patch) => {
+  const updateMessage = useCallback((id: string, patch: Partial<Message>) => {
     setMessages(prev =>
       prev.map(m => (m.id === id ? { ...m, ...patch } : m))
     )
   }, [])
 
   const handleEvent = useCallback(
-    (event) => {
+    (event: StreamEvent) => {
       switch (event.type) {
         case 'text': {
+          // Update session ID if provided in text event
+          if (event.session_id && !sessionId) setSessionId(event.session_id)
+
           if (!assistantBubbleId.current) {
             // First text chunk — create the assistant bubble
             const id = uid()
@@ -51,7 +68,7 @@ export function useAgent() {
             setMessages(prev =>
               prev.map(m =>
                 m.id === assistantBubbleId.current
-                  ? { ...m, content: m.content + event.content }
+                  ? { ...m, content: (m.content || '') + (event.content || '') }
                   : m
               )
             )
@@ -60,6 +77,9 @@ export function useAgent() {
         }
 
         case 'tool_use': {
+          // Update session ID if provided
+          if (event.session_id && !sessionId) setSessionId(event.session_id)
+
           // Finalize any open text bubble first
           if (assistantBubbleId.current) {
             updateMessage(assistantBubbleId.current, { streaming: false })
@@ -80,13 +100,15 @@ export function useAgent() {
         }
 
         case 'permission': {
+          // Update session ID if provided in permission event
+          if (event.session_id) setSessionId(event.session_id)
           setMessages(prev => [
             ...prev,
             {
               id: uid(),
               role: 'assistant',
               type: 'permission',
-              permission: event.permission,
+              permission: { ...event.permission, session_id: event.session_id },
               streaming: false,
             },
           ])
@@ -95,7 +117,10 @@ export function useAgent() {
 
         case 'result': {
           if (event.session_id) setSessionId(event.session_id)
-          setMeta({ cost_usd: event.cost_usd, num_turns: event.num_turns })
+          setMeta({
+            cost_usd: event.cost_usd || 0,
+            num_turns: event.num_turns || 0
+          })
           break
         }
 
@@ -133,7 +158,7 @@ export function useAgent() {
   )
 
   const sendMessage = useCallback(
-    async (text) => {
+    async (text: string) => {
       if (isStreaming || !text.trim()) return
 
       assistantBubbleId.current = null
@@ -150,9 +175,10 @@ export function useAgent() {
       try {
         await streamMessage(text, sessionId, handleEvent)
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
         setMessages(prev => [
           ...prev,
-          { id: uid(), role: 'assistant', type: 'error', content: err.message, streaming: false },
+          { id: uid(), role: 'assistant', type: 'error', content: errorMessage, streaming: false },
         ])
         setIsStreaming(false)
         setStatus('error')

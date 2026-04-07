@@ -1,12 +1,11 @@
 /**
  * Stream a message to the backend and yield parsed SSE events.
- *
- * @param {string} message - User message text
- * @param {string|null} sessionId - Existing session ID to resume, or null to start new
- * @param {(event: object) => void} onEvent - Called for each parsed SSE event
- * @returns {Promise<void>}
  */
-export async function streamMessage(message, sessionId, onEvent) {
+export async function streamMessage(
+  message: string,
+  sessionId: string | null,
+  onEvent: (event: any) => void
+): Promise<void> {
   const url = sessionId
     ? `/api/v1/messages/stream?resume_session_id=${encodeURIComponent(sessionId)}`
     : '/api/v1/messages/stream'
@@ -22,6 +21,10 @@ export async function streamMessage(message, sessionId, onEvent) {
     throw new Error(`HTTP ${response.status}: ${text}`)
   }
 
+  if (!response.body) {
+    throw new Error('Response body is null')
+  }
+
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
@@ -32,7 +35,7 @@ export async function streamMessage(message, sessionId, onEvent) {
 
     buffer += decoder.decode(value, { stream: true })
     const lines = buffer.split('\n')
-    buffer = lines.pop() // keep any partial line for next chunk
+    buffer = lines.pop() || '' // keep any partial line for next chunk
 
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue
